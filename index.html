@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Когда спокойнее лететь</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --text-1: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --wash: rgba(11, 11, 11, 0.04);
+  --closed: #256abf;
+  --limited: #86b6ef;
+  --zero: #f0efec;
+  --accent: #2a78d6;
+  --on-accent: #ffffff;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --text-1: #f0efec;
+    --text-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --wash: rgba(255, 255, 255, 0.05);
+    --closed: #86b6ef;
+    --limited: #256abf;
+    --zero: #262624;
+    --accent: #3987e5;
+    --on-accent: #0b0b0b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --text-1: #f0efec;
+  --text-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --wash: rgba(255, 255, 255, 0.05);
+  --closed: #86b6ef;
+  --limited: #256abf;
+  --zero: #262624;
+  --accent: #3987e5;
+  --on-accent: #0b0b0b;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-1);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.wrap { padding-top: 32px; padding-bottom: 8px; }
+h1 { font-size: 30px; line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 17px; margin: 0; }
+.lead { color: var(--text-2); margin: 0; max-width: 680px; }
+.sub { color: var(--text-2); margin: 2px 0 12px; font-size: 14px; }
+a { color: var(--accent); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 0;
+}
+.grid { display: grid; gap: 12px; margin: 12px 0; }
+@media (min-width: 900px) {
+  .grid.two { grid-template-columns: 3fr 2fr; }
+  .grid.halves { grid-template-columns: 1fr 1fr; }
+}
+
+/* Сейчас */
+.now { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 16px; }
+.now-title { font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 2px 10px 2px 8px; font-size: 13px; color: var(--text-1);
+  background: transparent; cursor: pointer; font-family: inherit;
+}
+.chip:hover { background: var(--wash); }
+.chip small { color: var(--text-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.muted { color: var(--text-2); }
+
+/* Фильтры */
+.filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 16px 0 0; }
+.filters label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+select {
+  font: inherit; color: var(--text-1); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; max-width: 100%;
+}
+.filters select { min-width: 260px; }
+@media (max-width: 520px) { .filters label { width: 100%; } .filters select { flex: 1; min-width: 0; } }
+
+/* Плитки */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 12px 0; }
+.tile .label { color: var(--text-2); font-size: 13px; }
+.tile .value { font-size: 28px; font-weight: 600; line-height: 1.2; margin: 4px 0 2px; }
+.tile .note { color: var(--text-2); font-size: 13px; }
+
+/* Проверка вылета */
+.check-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.check-out { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; align-items: baseline; }
+.check-out .big { font-size: 48px; font-weight: 600; line-height: 1; grid-row: span 2; }
+.verdict { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.check-more { color: var(--text-2); font-size: 14px; margin-top: 12px; }
+@media (max-width: 520px) { .check-out { grid-template-columns: 1fr; } .check-out .big { grid-row: auto; } }
+
+/* Графики */
+.head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; align-items: baseline; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; overflow: visible; }
+.chart text { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.chart text.mark { fill: var(--text-1); font-weight: 600; }
+.chart .hit { fill: transparent; cursor: default; }
+.chart .hit:hover, .chart .hit:focus { fill: var(--wash); outline: none; }
+.chart .cell { cursor: pointer; }
+.chart .cell:hover { opacity: 0.8; }
+.scale { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.scale .ramp { width: 160px; height: 8px; border-radius: 2px; }
+
+details { margin-top: 10px; font-size: 13px; color: var(--text-2); }
+summary { cursor: pointer; }
+table { border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+th, td { padding: 2px 12px 2px 0; text-align: right; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; }
+
+/* Рейтинг аэропортов */
+.rank { list-style: none; margin: 0; padding: 0; }
+.rank button {
+  width: 100%; display: grid; grid-template-columns: minmax(110px, 38%) 1fr 52px; gap: 10px; align-items: center;
+  font: inherit; font-size: 14px; color: var(--text-1); text-align: left;
+  background: none; border: 0; border-radius: 6px; padding: 4px 6px; cursor: pointer;
+}
+.rank button:hover, .rank button:focus-visible { background: var(--wash); outline: none; }
+.rank button[aria-current="true"] { background: var(--wash); font-weight: 600; }
+.rank .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.bar { display: flex; gap: 2px; height: 12px; }
+.bar i { display: block; height: 100%; }
+.bar i:last-child { border-radius: 0 4px 4px 0; }
+.more { margin-top: 8px; font: inherit; font-size: 14px; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 4px 6px; }
+
+/* Бот и поддержка автора */
+.bot-card { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px; margin-top: 12px; }
+.bot-card > div:first-child { flex: 1 1 320px; min-width: 0; }
+.bot-card .sub { margin-bottom: 0; }
+.bot-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+  border: 1px solid var(--border); color: var(--text-1); text-decoration: none; font-weight: 600; font-size: 14px;
+}
+.button:hover { background: var(--wash); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.button.primary:hover { filter: brightness(1.08); }
+.button:focus-visible, select:focus-visible, .chip:focus-visible, .more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Последние ограничения */
+.recent { list-style: none; margin: 0; padding: 0; }
+.recent li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--grid); font-size: 14px; }
+.recent li:last-child { border-bottom: 0; }
+.recent .when { font-variant-numeric: tabular-nums; }
+.recent .dur { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.recent .dot { position: relative; top: -1px; }
+
+footer.wrap { color: var(--text-2); font-size: 13px; padding-bottom: 40px; }
+footer ul { padding-left: 18px; margin: 8px 0; }
+
+#tip {
+  position: fixed; z-index: 10; pointer-events: none; display: none;
+  background: var(--surface); color: var(--text-1);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); font-size: 13px; min-width: 150px;
+}
+#tip .t { color: var(--text-2); margin-bottom: 4px; }
+#tip .r { display: flex; align-items: center; gap: 8px; }
+#tip .r b { font-variant-numeric: tabular-nums; }
+#tip .r span { color: var(--text-2); }
+#tip .k { width: 12px; height: 2px; border-radius: 1px; flex: none; }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <h1>Когда спокойнее лететь</h1>
+  <p class="lead">Сколько времени аэропорты были под ограничениями Росавиации: по часам, дням недели и аэропортам. <span id="period"></span></p>
+</header>
+
+<main class="wrap">
+  <section class="card now" id="now" aria-live="polite"></section>
+
+  <div class="filters">
+    <label>Аэропорт <select id="airport"></select></label>
+  </div>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card" id="check">
+    <h2>Проверить вылет</h2>
+    <p class="sub">Выберите день недели и час вылета (МСК), чтобы увидеть, как часто в это время действовали ограничения.</p>
+    <div class="check-row">
+      <select id="ck-day" aria-label="День недели"></select>
+      <select id="ck-hour" aria-label="Час вылета"></select>
+    </div>
+    <div id="ck-out"></div>
+  </section>
+
+  <div class="grid two">
+    <section class="card">
+      <div class="head"><h2>По времени суток</h2><div class="legend" data-legend></div></div>
+      <p class="sub">Какую долю времени в этот час действовали ограничения (МСК)</p>
+      <div class="chart" id="ch-hour"></div>
+      <details><summary>Таблица</summary><div id="tb-hour"></div></details>
+    </section>
+    <section class="card">
+      <div class="head"><h2>По дням недели</h2><div class="legend" data-legend></div></div>
+      <p class="sub">Сколько часов в среднем за сутки</p>
+      <div class="chart" id="ch-wd"></div>
+      <details><summary>Таблица</summary><div id="tb-wd"></div></details>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>День недели × час</h2>
+    <p class="sub">Доля времени под ограничениями (закрыт или по согласованию). Нажмите на ячейку, чтобы проверить этот вылет.</p>
+    <div class="chart" id="ch-heat"></div>
+    <div class="scale"><span>0%</span><span class="ramp" id="heat-ramp"></span><span id="heat-max"></span></div>
+  </section>
+
+  <section class="card" style="margin-top: 12px">
+    <div class="head"><h2>По дням</h2><div class="legend" data-legend></div></div>
+    <p class="sub">Часы под ограничениями в каждые сутки</p>
+    <div class="chart" id="ch-daily"></div>
+  </section>
+
+  <div class="grid halves">
+    <section class="card">
+      <div class="head"><h2>Аэропорты</h2><div class="legend" data-legend></div></div>
+      <p class="sub">Доля времени под ограничениями. Нажмите, чтобы выбрать аэропорт.</p>
+      <ol class="rank" id="rank"></ol>
+      <button class="more" id="rank-more" type="button"></button>
+    </section>
+    <section class="card">
+      <h2>Последние ограничения</h2>
+      <p class="sub" id="recent-sub"></p>
+      <ul class="recent" id="recent"></ul>
+    </section>
+  </div>
+
+  <section class="card bot-card" id="bot-card" hidden>
+    <div>
+      <h2>Уведомления в Telegram</h2>
+      <p class="sub" id="bot-text"></p>
+    </div>
+    <div class="bot-actions">
+      <a class="button" id="bot-open" target="_blank" rel="noopener">Открыть бота</a>
+      <a class="button primary" id="bot-donate" target="_blank" rel="noopener">⭐ Поддержать автора</a>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <h2 style="font-size: 15px; color: var(--text-1)">Как считается</h2>
+  <ul id="method"></ul>
+</footer>
+
+<div id="tip" role="tooltip"></div>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+const S = window.STATS;
+const HUB = S.hub;
+const ALL = [HUB, ...S.airports];
+const BY_KEY = Object.fromEntries(ALL.map(a => [a.key, a]));
+
+const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const DAYS_FULL = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"];
+const DAYS_ACC = ["в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу", "в воскресенье"];
+const MONTHS = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const MONTHS_FULL = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+const LEVEL_NAME = { closed: "Закрыт", limited: "По согласованию" };
+const SERIES = [
+  { key: 0, name: "Закрыт полностью", color: "var(--closed)" },
+  { key: 1, name: "По согласованию", color: "var(--limited)" },
+];
+const HEAT_LIGHT = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"];
+const HEAT_DARK = ["#0d366b", "#104281", "#184f95", "#1c5cab", "#256abf", "#2a78d6", "#3987e5", "#5598e7", "#6da7ec", "#86b6ef", "#9ec5f4", "#b7d3f6", "#cde2fb"];
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+document.documentElement.lang = "ru";
+
+// Ссылка на аэропорт: #vnukovo (латинское имя считает build.py).
+// Кириллица в адресе после # до опубликованной страницы не доходит.
+const token = (a) => a.slug;
+const BY_TOKEN = Object.fromEntries(ALL.map(a => [token(a), a]));
+// Внутри Telegram параметры запуска мини-апа приходят в адресе после #.
+const IN_TG = /tgWebApp/.test(location.hash);
+
+const $ = (sel) => document.querySelector(sel);
+const nf1 = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const pct = (x) => nf1.format(x * 100) + "%";
+const hrs = (h) => nf1.format(h) + " ч";
+const pad = (n) => String(n).padStart(2, "0");
+const hourRange = (h) => `${pad(h)}:00–${pad((h + 1) % 24)}:00`;
+const sum2 = (v) => v[0] + v[1];
+
+function el(tag, attrs = {}, text) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) if (v != null) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function sv(tag, attrs = {}, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) if (v != null) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function fmtDate(iso, withTime = true) {
+  // Время в данных уже МСК; выводим его как есть, не завися от пояса браузера.
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  const date = `${+m[3]} ${MONTHS[+m[2] - 1]}`;
+  return withTime && m[4] ? `${date}, ${m[4]}:${m[5]}` : date;
+}
+function fmtDur(min) {
+  if (min == null) return "—";
+  const h = Math.floor(min / 60), m = Math.round(min % 60);
+  return h ? `${h} ч ${pad(m)} мин` : `${m} мин`;
+}
+function isDark() {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function heatColor(v, max) {
+  if (v <= 0) return "var(--zero)";
+  const ramp = isDark() ? HEAT_DARK : HEAT_LIGHT;
+  return ramp[Math.min(ramp.length - 1, Math.floor(v / max * ramp.length))];
+}
+function argmin(arr) { return arr.reduce((b, v, i) => (v < arr[b] ? i : b), 0); }
+function argmax(arr) { return arr.reduce((b, v, i) => (v > arr[b] ? i : b), 0); }
+function niceTicks(max, count = 4) {
+  const raw = max / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => s >= raw);
+  const ticks = [];
+  for (let v = 0; v <= max + step * 0.999; v += step) ticks.push(+v.toFixed(10));
+  return ticks;
+}
+
+// ---------- подсказка ----------
+const tip = $("#tip");
+function showTip(evt, title, rows) {
+  tip.textContent = "";
+  tip.append(el("div", { class: "t" }, title));
+  for (const r of rows) {
+    const row = el("div", { class: "r" });
+    if (r.color) { const k = el("i", { class: "k" }); k.style.background = r.color; row.append(k); }
+    row.append(el("b", {}, r.value), el("span", {}, r.label));
+    tip.append(row);
+  }
+  tip.style.display = "block";
+  let x, y;
+  if (evt.type === "focus") {
+    const b = evt.target.getBoundingClientRect();
+    x = b.left + b.width / 2; y = b.top;
+  } else { x = evt.clientX; y = evt.clientY; }
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let left = x + 12, top = y - h - 12;
+  if (left + w > innerWidth - 8) left = x - w - 12;
+  if (left < 8) left = 8;
+  if (top < 8) top = y + 16;
+  tip.style.left = left + "px";
+  tip.style.top = top + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+function bindTip(node, title, rows) {
+  const show = (e) => showTip(e, title, rows);
+  node.addEventListener("pointermove", show);
+  node.addEventListener("focus", show);
+  node.addEventListener("pointerleave", hideTip);
+  node.addEventListener("blur", hideTip);
+}
+
+// ---------- столбчатая диаграмма (закрыт + по согласованию) ----------
+function barPath(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+function columnChart(box, { values, xLabel, tipTitle, fmt, tickFmt, marks = {}, height = 200, focusable = true, onPick }) {
+  box.textContent = "";
+  const W = box.clientWidth;
+  if (W < 80) return;  // блок ещё не размечен; перерисуем по ResizeObserver
+  const m = { t: 20, r: 2, b: 22, l: 38 };
+  const iw = W - m.l - m.r, ih = height - m.t - m.b;
+  const ticks = niceTicks(Math.max(...values.map(sum2)) || 0.01);
+  const top = ticks[ticks.length - 1];
+  const svg = sv("svg", { width: W, height, role: "img" });
+  const yOf = (v) => m.t + ih - (v / top) * ih;
+
+  for (const t of ticks) {
+    svg.append(sv("line", { x1: m.l, x2: W - m.r, y1: yOf(t), y2: yOf(t), stroke: t === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1, "shape-rendering": "crispEdges" }));
+    svg.append(sv("text", { x: m.l - 6, y: yOf(t) + 4, "text-anchor": "end" }, tickFmt(t)));
+  }
+
+  const band = iw / values.length;
+  const gap = band > 8 ? 2 : 1;
+  const bw = Math.max(1, Math.min(24, band - gap));
+  values.forEach((v, i) => {
+    const x = m.l + i * band + (band - bw) / 2;
+    const segs = SERIES.map(s => ({ s, val: v[s.key] })).filter(p => p.val > 0);
+    let base = m.t + ih;
+    segs.forEach((p, k) => {
+      const h = (p.val / top) * ih;
+      const g = k > 0 ? 2 : 0;
+      const hh = h - g;
+      if (hh > 0.3) {
+        const yTop = base - h;
+        const isTop = k === segs.length - 1;
+        svg.append(sv("path", { d: isTop ? barPath(x, yTop, bw, hh, bw < 6 ? 1 : 4) : `M${x},${base - g}V${yTop}H${x + bw}V${base - g}Z`, fill: p.s.color }));
+      }
+      base -= h;
+    });
+    if (marks[i]) {
+      svg.append(sv("text", { class: "mark", x: m.l + i * band + band / 2, y: yOf(sum2(v)) - 6, "text-anchor": "middle" }, marks[i]));
+    }
+    const hit = sv("rect", { class: "hit", x: m.l + i * band, y: m.t, width: band, height: ih, tabindex: focusable ? 0 : null, "aria-label": `${tipTitle(i)}: ${fmt(sum2(v))}` });
+    bindTip(hit, tipTitle(i), [
+      { value: fmt(sum2(v)), label: "всего" },
+      ...SERIES.map(s => ({ color: s.color, value: fmt(v[s.key]), label: s.name.toLowerCase() })),
+    ]);
+    if (onPick) { hit.style.cursor = "pointer"; hit.addEventListener("click", () => onPick(i)); }
+    svg.append(hit);
+    const lbl = xLabel(i);
+    if (lbl) svg.append(sv("text", { x: m.l + i * band + band / 2, y: height - 6, "text-anchor": "middle" }, lbl));
+  });
+  box.append(svg);
+}
+
+function table(box, head, rows) {
+  box.textContent = "";
+  const t = el("table");
+  const tr = el("tr");
+  head.forEach(h => tr.append(el("th", {}, h)));
+  t.append(tr);
+  rows.forEach(r => { const row = el("tr"); r.forEach(c => row.append(el("td", {}, c))); t.append(row); });
+  box.append(t);
+}
+
+// ---------- состояние ----------
+let current = HUB;
+let check = { day: 0, hour: 8 };
+let rankAll = false;
+
+function phrase(a) {
+  return a.group ? ["аэропорты Москвы в среднем были", "аэропорты Москвы"] : [`${a.name} был`, a.name];
+}
+function totalShare(a) { return a.share[0] + a.share[1]; }
+
+// ---------- блоки ----------
+function renderNow() {
+  const box = $("#now");
+  box.textContent = "";
+  const active = S.airports.filter(a => a.active);
+  box.append(el("span", { class: "now-title" }, "Сейчас"));
+  if (!active.length) {
+    const s = el("span", { class: "verdict" });
+    const d = el("i", { class: "dot" }); d.style.background = "var(--good)";
+    s.append(d, document.createTextNode("Действующих ограничений нет"));
+    box.append(s, el("span", { class: "muted" }, `по данным на ${fmtDate(S.generated)}`));
+    return;
+  }
+  const chips = el("div", { class: "chips" });
+  active.sort((a, b) => (a.active.level === b.active.level ? 0 : a.active.level === "closed" ? -1 : 1));
+  for (const a of active) {
+    const c = el("button", { class: "chip", type: "button" });
+    const d = el("i", { class: "dot" }); d.style.background = a.active.level === "closed" ? "var(--critical)" : "var(--warning)";
+    c.append(d, document.createTextNode(a.name + " "), el("small", {}, `${LEVEL_NAME[a.active.level].toLowerCase()} с ${fmtDate(a.active.since).split(", ")[1]}`));
+    c.addEventListener("click", () => select(a.key));
+    chips.append(c);
+  }
+  box.append(chips, el("span", { class: "muted" }, `по данным на ${fmtDate(S.generated)}`));
+}
+
+function renderSelect() {
+  const s = $("#airport");
+  const moscow = el("optgroup", { label: "Москва" });
+  moscow.append(el("option", { value: HUB.key }, `${HUB.name} — ${pct(totalShare(HUB))}`));
+  for (const k of HUB.group) moscow.append(el("option", { value: k }, `${BY_KEY[k].name} — ${pct(totalShare(BY_KEY[k]))}`));
+  const rest = el("optgroup", { label: "Все аэропорты" });
+  for (const a of S.airports) if (!HUB.group.includes(a.key)) rest.append(el("option", { value: a.key }, `${a.name} — ${pct(totalShare(a))}`));
+  s.append(moscow, rest);
+  s.addEventListener("change", () => select(s.value));
+}
+
+function renderTiles(a) {
+  const box = $("#tiles");
+  box.textContent = "";
+  const hourTot = a.hour.map(sum2);
+  const wdTot = a.weekday.map(sum2);
+  const qh = argmin(hourTot), wh = argmax(hourTot);
+  const bd = argmin(wdTot), wd = argmax(wdTot);
+  const tiles = [
+    ["Под ограничениями", pct(totalShare(a)), `закрыт ${pct(a.share[0])} · по согласованию ${pct(a.share[1])}`],
+    ["Самое спокойное время", hourRange(qh), `${pct(hourTot[qh])} времени; хуже всего ${hourRange(wh)} — ${pct(hourTot[wh])}`],
+    ["Худший день недели", DAYS_FULL[wd], `${hrs(wdTot[wd])} в сутки; лучший — ${DAYS_FULL[bd]}, ${hrs(wdTot[bd])}`],
+    a.group
+      ? ["Эпизодов ограничений", String(a.episodes), "сумма по четырём аэропортам"]
+      : ["Эпизодов ограничений", String(a.episodes), `типичная длительность ${fmtDur(a.median_min)}`],
+  ];
+  for (const [label, value, note] of tiles) {
+    const t = el("div", { class: "card tile" });
+    t.append(el("div", { class: "label" }, label), el("div", { class: "value" }, value), el("div", { class: "note" }, note));
+    box.append(t);
+  }
+}
+
+function renderCheck(a) {
+  const box = $("#ck-out");
+  box.textContent = "";
+  const { day, hour } = check;
+  const v = a.heat[day][hour];
+  const avg = totalShare(a);
+  const [subj, name] = phrase(a);
+  const out = el("div", { class: "check-out" });
+  out.append(el("div", { class: "big" }, pct(v)));
+  out.append(el("div", {}, `${DAYS_ACC[day][0].toUpperCase() + DAYS_ACC[day].slice(1)} с ${pad(hour)}:00 до ${pad((hour + 1) % 24)}:00 ${subj} под ограничениями ${pct(v)} времени (среднее за сутки — ${pct(avg)}).`));
+  let color, text;
+  const ratio = avg > 0 ? v / avg : 0;
+  if (v === 0) [color, text] = ["var(--good)", "✓ За период ограничений в это время не было"];
+  else if (ratio < 0.75) [color, text] = ["var(--good)", "✓ Спокойнее обычного"];
+  else if (ratio <= 1.25) [color, text] = ["var(--muted)", "≈ Как обычно"];
+  else if (ratio <= 2) [color, text] = ["var(--serious)", `▲ Выше обычного — в ${nf1.format(ratio)} раза`];
+  else [color, text] = ["var(--critical)", `▲ Заметно выше обычного — в ${nf1.format(ratio)} раза`];
+  const verdict = el("div", { class: "verdict" });
+  const d = el("i", { class: "dot" }); d.style.background = color;
+  verdict.append(d, document.createTextNode(text));
+  out.append(verdict);
+  box.append(out);
+  const row = a.heat[day];
+  const best = argmin(row);
+  const nb = [hour - 1, hour + 1].map(h => (h + 24) % 24).map(h => `${pad(h)}:00 — ${pct(row[h])}`).join(", ");
+  box.append(el("div", { class: "check-more" },
+    `Соседние часы: ${nb}. Спокойнее всего ${DAYS_ACC[day]} ${hourRange(best)} — ${pct(row[best])}. ` +
+    `Это статистика за ${Math.round(S.days)} дней, а не прогноз: закрытия зависят от обстановки.`));
+}
+
+function renderCharts(a) {
+  const hourTot = a.hour.map(sum2);
+  const qh = argmin(hourTot), wh = argmax(hourTot);
+  columnChart($("#ch-hour"), {
+    values: a.hour,
+    xLabel: (i) => (i % 3 === 0 ? pad(i) : ""),
+    tipTitle: (i) => hourRange(i),
+    fmt: pct,
+    tickFmt: (t) => Math.round(t * 100) + "%",
+    marks: { [qh]: pct(hourTot[qh]), [wh]: pct(hourTot[wh]) },
+    onPick: (i) => { check.hour = i; syncCheck(); },
+  });
+  table($("#tb-hour"), ["Час", "Закрыт", "По согласованию", "Всего"],
+    a.hour.map((v, i) => [hourRange(i), pct(v[0]), pct(v[1]), pct(sum2(v))]));
+
+  const wdTot = a.weekday.map(sum2);
+  const bd = argmin(wdTot), wd = argmax(wdTot);
+  columnChart($("#ch-wd"), {
+    values: a.weekday,
+    xLabel: (i) => DAYS[i],
+    tipTitle: (i) => DAYS_FULL[i][0].toUpperCase() + DAYS_FULL[i].slice(1),
+    fmt: hrs,
+    tickFmt: (t) => nf1.format(t).replace(",0", "") + " ч",
+    marks: { [bd]: hrs(wdTot[bd]), [wd]: hrs(wdTot[wd]) },
+    onPick: (i) => { check.day = i; syncCheck(); },
+  });
+  table($("#tb-wd"), ["День", "Закрыт", "По согласованию", "Всего"],
+    a.weekday.map((v, i) => [DAYS_FULL[i], hrs(v[0]), hrs(v[1]), hrs(sum2(v))]));
+
+  renderHeat(a);
+
+  const days = a.daily;
+  columnChart($("#ch-daily"), {
+    values: days.map(d => [d[1], d[2]]),
+    xLabel: (i) => { const dd = +days[i][0].slice(8, 10); return dd === 1 || dd === 15 ? fmtDate(days[i][0], false) : ""; },
+    tipTitle: (i) => `${fmtDate(days[i][0], false)}, ${DAYS_FULL[(new Date(days[i][0] + "T12:00:00Z").getUTCDay() + 6) % 7]}`,
+    fmt: hrs,
+    tickFmt: (t) => t + " ч",
+    height: 180,
+    focusable: false,
+  });
+}
+
+function renderHeat(a) {
+  const box = $("#ch-heat");
+  box.textContent = "";
+  const W = box.clientWidth;
+  if (W < 80) return;
+  const l = 26, t = 18, gap = 2;
+  const cw = (W - l) / 24;
+  const ch = Math.max(16, Math.min(28, cw));
+  const H = t + ch * 7;
+  const max = Math.max(...a.heat.flat()) || 0.01;
+  const svg = sv("svg", { width: W, height: H, role: "img", "aria-label": "Тепловая карта: день недели × час" });
+  for (let h = 0; h < 24; h += 3) svg.append(sv("text", { x: l + h * cw + cw / 2, y: 11, "text-anchor": "middle" }, pad(h)));
+  a.heat.forEach((row, d) => {
+    svg.append(sv("text", { x: 0, y: t + d * ch + ch / 2 + 4 }, DAYS[d]));
+    row.forEach((v, h) => {
+      const sel = d === check.day && h === check.hour;
+      const r = sv("rect", {
+        class: "cell", x: l + h * cw + gap / 2, y: t + d * ch + gap / 2,
+        width: Math.max(1, cw - gap), height: ch - gap, rx: 2,
+        fill: heatColor(v, max),
+        stroke: sel ? "var(--text-1)" : null, "stroke-width": sel ? 2 : null,
+      });
+      bindTip(r, `${DAYS_FULL[d][0].toUpperCase() + DAYS_FULL[d].slice(1)}, ${hourRange(h)}`, [{ value: pct(v), label: "времени под ограничениями" }]);
+      r.addEventListener("click", () => { check = { day: d, hour: h }; syncCheck(); });
+      svg.append(r);
+    });
+  });
+  box.append(svg);
+  const ramp = isDark() ? HEAT_DARK : HEAT_LIGHT;
+  $("#heat-ramp").style.background = `linear-gradient(90deg, ${ramp.join(", ")})`;
+  $("#heat-max").textContent = pct(max);
+}
+
+function renderRank() {
+  const list = $("#rank");
+  list.textContent = "";
+  const items = rankAll ? S.airports : S.airports.slice(0, 15);
+  const max = totalShare(S.airports[0]);
+  for (const a of items) {
+    const b = el("button", { type: "button", "aria-current": a.key === current.key ? "true" : "false" });
+    const bar = el("span", { class: "bar" });
+    SERIES.forEach(s => {
+      if (a.share[s.key] <= 0) return;
+      const seg = el("i");
+      seg.style.width = (a.share[s.key] / max) * 100 + "%";
+      seg.style.background = s.color;
+      bar.append(seg);
+    });
+    b.append(el("span", { class: "nm" }, a.name), bar, el("span", { class: "val" }, pct(totalShare(a))));
+    bindTip(b, a.name, [
+      { value: pct(totalShare(a)), label: "всего" },
+      ...SERIES.map(s => ({ color: s.color, value: pct(a.share[s.key]), label: s.name.toLowerCase() })),
+    ]);
+    b.addEventListener("click", () => select(a.key));
+    const li = el("li");
+    li.append(b);
+    list.append(li);
+  }
+  $("#rank-more").textContent = rankAll ? "Свернуть" : `Показать все ${S.airports.length}`;
+}
+
+function renderRecent(a) {
+  const list = $("#recent");
+  list.textContent = "";
+  let items = a.recent.map(r => ({ ...r, who: null }));
+  if (a.group) {
+    items = a.group.flatMap(k => BY_KEY[k].recent.map(r => ({ ...r, who: BY_KEY[k].name })))
+      .sort((x, y) => (x.start < y.start ? 1 : -1)).slice(0, 12);
+  }
+  $("#recent-sub").textContent = items.length ? `${a.group ? "Аэропорты Москвы" : a.name}: время публикации сообщений Росавиации, МСК` : "За период ограничений не было";
+  for (const r of items) {
+    const li = el("li");
+    const d = el("i", { class: "dot", title: LEVEL_NAME[r.level] }); d.style.background = r.level === "closed" ? "var(--critical)" : "var(--warning)";
+    const when = el("span", { class: "when" });
+    const link = el("a", { href: `https://t.me/${S.channel}/${r.msg}`, target: "_blank", rel: "noopener" }, fmtDate(r.start));
+    when.append(link, document.createTextNode(` · ${LEVEL_NAME[r.level].toLowerCase()}${r.who ? " · " + r.who : ""}`));
+    let dur;
+    if (!r.end) dur = "действует";
+    else {
+      const min = (new Date(r.end) - new Date(r.start)) / 60000;
+      dur = (r.end_kind === "lifted" ? "" : "≈ ") + fmtDur(min);
+    }
+    li.append(d, when, el("span", { class: "dur", title: r.end_kind === "lifted" ? null : "о снятии не сообщали, длительность оценена" }, dur));
+    list.append(li);
+  }
+}
+
+function renderMethod() {
+  const est = (S.end_kinds.no_lift || 0) + (S.end_kinds.upd || 0);
+  const [from, to] = S.window;
+  $("#period").textContent = `Данные за ${Math.round(S.days)} дней: ${fmtDate(from, false)} — ${fmtDate(to)} МСК.`;
+  const ul = $("#method");
+  const items = [
+    ["Источник — сообщения канала «Говорит Росавиация» ", ["t.me/" + S.channel, "https://t.me/" + S.channel], ` о введении и снятии ограничений: ${S.messages} сообщений, ${S.segments} эпизодов ограничений в ${S.airports.length} аэропортах.`],
+    ["«Закрыт» — введены ограничения на приём и выпуск воздушных судов. «По согласованию» — аэропорт принимает и отправляет рейсы по согласованию с соответствующими органами: рейсы идут, но вероятны задержки."],
+    ["Время — момент публикации сообщения (МСК); фактическое введение или снятие может отличаться на несколько минут."],
+    [`Если о снятии не сообщили (${est} из ${S.segments} эпизодов), длительность считается типичной для этого аэропорта.`],
+    ["«Московский авиаузел» — среднее по Шереметьево, Внуково, Домодедово и Жуковскому: какую долю времени был под ограничениями аэропорт, из которого вы летите."],
+    ["Росавиация пишет, что быстрее всего обновляет канал в MAX; в Telegram-версии отдельные сообщения могут отсутствовать."],
+    ["Это статистика прошлого, а не прогноз: ограничения вводятся по обстановке."],
+  ];
+  for (const parts of items) {
+    const li = el("li");
+    for (const p of parts) li.append(Array.isArray(p) ? el("a", { href: p[1], target: "_blank", rel: "noopener" }, p[0]) : document.createTextNode(p));
+    ul.append(li);
+  }
+}
+
+function renderLegends() {
+  document.querySelectorAll("[data-legend]").forEach(box => {
+    box.textContent = "";
+    for (const s of SERIES) {
+      const item = el("span");
+      const sw = el("i", { class: "sw" }); sw.style.background = s.color;
+      item.append(sw, document.createTextNode(s.name));
+      box.append(item);
+    }
+  });
+}
+
+function syncCheck() {
+  $("#ck-day").value = check.day;
+  $("#ck-hour").value = check.hour;
+  renderCheck(current);
+  renderHeat(current);
+}
+
+function renderAll() {
+  renderTiles(current);
+  renderCheck(current);
+  renderCharts(current);
+  renderRank();
+  renderRecent(current);
+}
+
+function select(key) {
+  current = BY_KEY[key] || HUB;
+  $("#airport").value = current.key;
+  if (!IN_TG) {  // в Telegram адрес хранит параметры запуска — не трогаем
+    try { history.replaceState(null, "", "#" + token(current)); } catch (e) {}
+  }
+  renderAll();
+}
+
+function renderBot() {
+  if (!S.bot) return;
+  const url = `https://t.me/${S.bot}`;
+  $("#bot-text").textContent = IN_TG
+    ? "Бот пришлёт сообщение, когда в выбранном аэропорту введут или снимут ограничения. Если статистика помогла, поддержите автора звёздами Telegram."
+    : `В боте @${S.bot} — уведомления, когда аэропорт закрывают или открывают, и проверка времени вылета. Там же можно поддержать автора звёздами Telegram.`;
+  $("#bot-open").href = url;
+  $("#bot-open").hidden = IN_TG;
+  $("#bot-donate").href = `${url}?start=donate`;
+  $("#bot-card").hidden = false;
+  for (const a of [$("#bot-open"), $("#bot-donate")]) {
+    a.addEventListener("click", (e) => {
+      const tg = window.Telegram && window.Telegram.WebApp;
+      if (IN_TG && tg) { e.preventDefault(); tg.openTelegramLink(a.href); }
+    });
+  }
+}
+
+// Мини-ап: SDK Telegram грузим только внутри Telegram, чтобы сайт от него не зависел.
+function initTelegram() {
+  if (!IN_TG) return;
+  const s = document.createElement("script");
+  s.src = "https://telegram.org/js/telegram-web-app.js";
+  s.onload = () => {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg) return;
+    const applyTheme = () => {
+      document.documentElement.dataset.theme = tg.colorScheme === "dark" ? "dark" : "light";
+      const page = getComputedStyle(document.documentElement).getPropertyValue("--page").trim();
+      try { tg.setHeaderColor(page); tg.setBackgroundColor(page); } catch (e) {}
+    };
+    applyTheme();
+    tg.onEvent("themeChanged", applyTheme);
+    tg.ready();
+    tg.expand();
+    const start = tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+    if (start && BY_TOKEN[start]) select(BY_TOKEN[start].key);
+  };
+  document.head.append(s);
+}
+
+function init() {
+  // По умолчанию — завтрашний день недели (МСК), 08:00.
+  const mskNow = new Date(Date.now() + 3 * 3600e3);
+  check.day = (mskNow.getUTCDay() + 6 + 1) % 7;
+  const daySel = $("#ck-day"), hourSel = $("#ck-hour");
+  DAYS_FULL.forEach((d, i) => daySel.append(el("option", { value: i }, d[0].toUpperCase() + d.slice(1))));
+  for (let h = 0; h < 24; h++) hourSel.append(el("option", { value: h }, hourRange(h)));
+  daySel.addEventListener("change", () => { check.day = +daySel.value; syncCheck(); });
+  hourSel.addEventListener("change", () => { check.hour = +hourSel.value; syncCheck(); });
+  $("#rank-more").addEventListener("click", () => { rankAll = !rankAll; renderRank(); });
+
+  renderNow();
+  renderSelect();
+  renderLegends();
+  renderMethod();
+  daySel.value = check.day;
+  hourSel.value = check.hour;
+  // Аэропорт: ?a=vnukovo (кнопка в боте) или #vnukovo (ссылка на страницу).
+  const wanted = new URLSearchParams(location.search).get("a") || location.hash.slice(1).toLowerCase();
+  select((BY_TOKEN[wanted] || HUB).key);
+  renderBot();
+  initTelegram();
+
+  let timer, lastWidth = 0;
+  new ResizeObserver(([entry]) => {
+    const w = Math.round(entry.contentRect.width);
+    if (w === lastWidth) return;
+    lastWidth = w;
+    clearTimeout(timer);
+    timer = setTimeout(() => renderCharts(current), 100);
+  }).observe(document.querySelector("main"));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => renderHeat(current));
+  // Переключатель темы в просмотрщике ставит data-theme на <html>.
+  new MutationObserver(() => renderHeat(current)).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  addEventListener("scroll", hideTip, { passive: true });
+}
+
+init();
+</script>
+</body>
+</html>
