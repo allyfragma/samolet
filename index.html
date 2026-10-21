@@ -721,6 +721,7 @@ function renderMethod() {
     ["Росавиация пишет, что быстрее всего обновляет канал в MAX; в Telegram-версии отдельные сообщения могут отсутствовать."],
     ["Это статистика прошлого, а не прогноз: ограничения вводятся по обстановке."],
   ];
+  if (S.site) items.push(["Статистика по каждому аэропорту отдельными страницами: ", ["список аэропортов", S.site + "a/"], "."]);
   for (const parts of items) {
     const li = el("li");
     for (const p of parts) li.append(Array.isArray(p) ? el("a", { href: p[1], target: "_blank", rel: "noopener" }, p[0]) : document.createTextNode(p));
@@ -770,9 +771,9 @@ function renderBot() {
   $("#bot-text").textContent = IN_TG
     ? "Бот пришлёт сообщение, когда в выбранном аэропорту введут или снимут ограничения. Если статистика помогла, поддержите автора звёздами Telegram."
     : `В боте @${S.bot} — уведомления, когда аэропорт закрывают или открывают, и проверка времени вылета. Там же можно поддержать автора звёздами Telegram.`;
-  $("#bot-open").href = url;
+  $("#bot-open").href = `${url}?start=${token(current)}__app`;
   $("#bot-open").hidden = IN_TG;
-  $("#bot-donate").href = `${url}?start=donate`;
+  $("#bot-donate").href = `${url}?start=donate__app`;
   $("#bot-card").hidden = false;
   for (const a of [$("#bot-open"), $("#bot-donate")]) {
     a.addEventListener("click", (e) => {
