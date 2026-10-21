@@ -722,6 +722,7 @@ function renderMethod() {
     ["Это статистика прошлого, а не прогноз: ограничения вводятся по обстановке."],
   ];
   if (S.site) items.push(["Статистика по каждому аэропорту отдельными страницами: ", ["список аэропортов", S.site + "a/"], "."]);
+  if (S.metrika) items.push(["Посещения страницы считает Яндекс Метрика — без записи действий посетителей."]);
   for (const parts of items) {
     const li = el("li");
     for (const p of parts) li.append(Array.isArray(p) ? el("a", { href: p[1], target: "_blank", rel: "noopener" }, p[0]) : document.createTextNode(p));
@@ -746,6 +747,7 @@ function syncCheck() {
   $("#ck-hour").value = check.hour;
   renderCheck(current);
   renderHeat(current);
+  goal("check", { airport: token(current) });
 }
 
 function renderAll() {
@@ -756,12 +758,13 @@ function renderAll() {
   renderRecent(current);
 }
 
-function select(key) {
+function select(key, byUser = true) {
   current = BY_KEY[key] || HUB;
   $("#airport").value = current.key;
   if (!IN_TG) {  // в Telegram адрес хранит параметры запуска — не трогаем
     try { history.replaceState(null, "", "#" + token(current)); } catch (e) {}
   }
+  if (byUser) goal("airport", { airport: token(current) });
   renderAll();
 }
 
@@ -777,10 +780,33 @@ function renderBot() {
   $("#bot-card").hidden = false;
   for (const a of [$("#bot-open"), $("#bot-donate")]) {
     a.addEventListener("click", (e) => {
+      goal(a.id === "bot-donate" ? "donate_click" : "bot_open");
       const tg = window.Telegram && window.Telegram.WebApp;
       if (IN_TG && tg) { e.preventDefault(); tg.openTelegramLink(a.href); }
     });
   }
+}
+
+// Яндекс Метрика — только на опубликованном сайте (он же мини-ап), не в локальном
+// просмотре и не в копии на claude.ai. Без вебвизора: считаем посещения, не записываем действия.
+function initMetrika() {
+  if (!S.metrika || !S.site) return;
+  try { if (location.origin !== new URL(S.site).origin) return; } catch (e) { return; }
+  window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
+  window.ym.l = Date.now();
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = "https://mc.yandex.ru/metrika/tag.js";
+  document.head.append(s);
+  ym(S.metrika, "init", {
+    clickmap: true, trackLinks: true, accurateTrackBounce: true,
+    params: { platform: IN_TG ? "telegram" : "web" },
+  });
+}
+
+// Цели Метрики: что люди делают на странице.
+function goal(name, params) {
+  if (window.ym && S.metrika) ym(S.metrika, "reachGoal", name, params);
 }
 
 // Мини-ап: SDK Telegram грузим только внутри Telegram, чтобы сайт от него не зависел.
@@ -801,7 +827,7 @@ function initTelegram() {
     tg.ready();
     tg.expand();
     const start = tg.initDataUnsafe && tg.initDataUnsafe.start_param;
-    if (start && BY_TOKEN[start]) select(BY_TOKEN[start].key);
+    if (start && BY_TOKEN[start]) select(BY_TOKEN[start].key, false);
   };
   document.head.append(s);
 }
@@ -825,8 +851,9 @@ function init() {
   hourSel.value = check.hour;
   // Аэропорт: ?a=vnukovo (кнопка в боте) или #vnukovo (ссылка на страницу).
   const wanted = new URLSearchParams(location.search).get("a") || location.hash.slice(1).toLowerCase();
-  select((BY_TOKEN[wanted] || HUB).key);
+  select((BY_TOKEN[wanted] || HUB).key, false);
   renderBot();
+  initMetrika();
   initTelegram();
 
   let timer, lastWidth = 0;
