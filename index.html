@@ -149,6 +149,13 @@ select {
 .chart .cell { cursor: pointer; }
 .chart .cell:hover { opacity: 0.8; }
 .scale { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg button {
+  font: inherit; font-size: 13px; color: var(--text-2); background: none; border: 0;
+  border-radius: 6px; padding: 4px 10px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--wash); color: var(--text-1); font-weight: 600; }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .scale .ramp { width: 160px; height: 8px; border-radius: 2px; }
 
 details { margin-top: 10px; font-size: 13px; color: var(--text-2); }
@@ -253,8 +260,14 @@ footer ul { padding-left: 18px; margin: 8px 0; }
   </div>
 
   <section class="card">
-    <h2>День недели × час</h2>
-    <p class="sub">Доля времени под ограничениями (закрыт или по согласованию). Нажмите на ячейку, чтобы проверить этот вылет.</p>
+    <div class="head">
+      <h2>День недели × час</h2>
+      <div class="seg" role="group" aria-label="Что показывать на карте">
+        <button type="button" id="heat-all" data-heat="all" aria-pressed="true">Все ограничения</button>
+        <button type="button" id="heat-closed" data-heat="closed" aria-pressed="false">Только полные закрытия</button>
+      </div>
+    </div>
+    <p class="sub" id="heat-sub">Доля времени под ограничениями: закрыт или работал по согласованию. Нажмите на ячейку, чтобы проверить этот вылет.</p>
     <div class="chart" id="ch-heat"></div>
     <div class="scale"><span>0%</span><span class="ramp" id="heat-ramp"></span><span id="heat-max"></span></div>
   </section>
@@ -483,6 +496,7 @@ function table(box, head, rows) {
 let current = HUB;
 let check = { day: 0, hour: 8 };
 let rankAll = false;
+let heatMode = "all";  // «all» — все ограничения, «closed» — только полные закрытия
 
 function phrase(a) {
   return a.group ? ["аэропорты Москвы в среднем были", "аэропорты Москвы"] : [`${a.name} был`, a.name];
@@ -528,14 +542,13 @@ function renderSelect() {
 function renderTiles(a) {
   const box = $("#tiles");
   box.textContent = "";
-  const hourTot = a.hour.map(sum2);
-  const wdTot = a.weekday.map(sum2);
-  const qh = argmin(hourTot), wh = argmax(hourTot);
-  const bd = argmin(wdTot), wd = argmax(wdTot);
+  // Лучшее и худшее — по полным закрытиям: «по согласованию» рейсы всё же летают.
+  const qh = byClosed(a.hour, Math.min), wh = byClosed(a.hour, Math.max);
+  const bd = byClosed(a.weekday, Math.min), wd = byClosed(a.weekday, Math.max);
   const tiles = [
-    ["Под ограничениями", pct(totalShare(a)), `закрыт ${pct(a.share[0])} · по согласованию ${pct(a.share[1])}`],
-    ["Самое спокойное время", hourRange(qh), `${pct(hourTot[qh])} времени; хуже всего ${hourRange(wh)} — ${pct(hourTot[wh])}`],
-    ["Худший день недели", DAYS_FULL[wd], `${hrs(wdTot[wd])} в сутки; лучший — ${DAYS_FULL[bd]}, ${hrs(wdTot[bd])}`],
+    ["Под ограничениями", pct(totalShare(a)), `закрыт полностью ${pct(a.share[0])} · по согласованию ${pct(a.share[1])}`],
+    ["Реже всего закрывают", hourRange(qh), `закрыт ${pct(a.hour[qh][0])}, по согласованию ${pct(a.hour[qh][1])}; чаще всего ${hourRange(wh)} — ${pct(a.hour[wh][0])}`],
+    ["Худший день недели", DAYS_FULL[wd], `закрыт ${hrs(a.weekday[wd][0])} в сутки; лучший — ${DAYS_FULL[bd]}, ${hrs(a.weekday[bd][0])}`],
     a.group
       ? ["Эпизодов ограничений", String(a.episodes), "сумма по четырём аэропортам"]
       : ["Эпизодов ограничений", String(a.episodes), `типичная длительность ${fmtDur(a.median_min)}`],
@@ -547,34 +560,55 @@ function renderTiles(a) {
   }
 }
 
+// Индекс часа или дня с наименьшей (или наибольшей) долей полных закрытий; при равенстве — по общей доле.
+function byClosed(rows, pick) {
+  const keyOf = (v) => v[0] * 1000 + sum2(v);
+  const target = pick(...rows.map(keyOf));
+  return rows.findIndex(v => keyOf(v) === target);
+}
+
+// Доля полного закрытия и «по согласованию» в выбранный день недели и час.
+function levelsAt(a, day, hour) {
+  const total = a.heat[day][hour];
+  const closed = a.heat_closed ? a.heat_closed[day][hour] : total;
+  return [closed, Math.max(0, total - closed)];
+}
+
 function renderCheck(a) {
   const box = $("#ck-out");
   box.textContent = "";
   const { day, hour } = check;
-  const v = a.heat[day][hour];
-  const avg = totalShare(a);
-  const [subj, name] = phrase(a);
+  const [closed, limited] = levelsAt(a, day, hour);
+  const usual = a.share[0];
+  const [subj] = phrase(a);
+  const when = `${DAYS_ACC[day][0].toUpperCase() + DAYS_ACC[day].slice(1)} с ${pad(hour)}:00 до ${pad((hour + 1) % 24)}:00`;
   const out = el("div", { class: "check-out" });
-  out.append(el("div", { class: "big" }, pct(v)));
-  out.append(el("div", {}, `${DAYS_ACC[day][0].toUpperCase() + DAYS_ACC[day].slice(1)} с ${pad(hour)}:00 до ${pad((hour + 1) % 24)}:00 ${subj} под ограничениями ${pct(v)} времени (среднее за сутки — ${pct(avg)}).`));
+  out.append(el("div", { class: "big" }, pct(closed)));
+  out.append(el("div", {}, `${when} ${subj} полностью ${a.group ? "закрыты" : "закрыт"} ${pct(closed)} времени ` +
+    `(в среднем за сутки — ${pct(usual)}).` +
+    (limited ? ` Ещё ${pct(limited)} — по согласованию: рейсы шли, но возможны задержки.` : "")));
+  // Вердикт — по полным закрытиям: именно они грозят тем, что рейс не улетит.
   let color, text;
-  const ratio = avg > 0 ? v / avg : 0;
-  if (v === 0) [color, text] = ["var(--good)", "✓ За период ограничений в это время не было"];
-  else if (ratio < 0.75) [color, text] = ["var(--good)", "✓ Спокойнее обычного"];
-  else if (ratio <= 1.25) [color, text] = ["var(--muted)", "≈ Как обычно"];
-  else if (ratio <= 2) [color, text] = ["var(--serious)", `▲ Выше обычного — в ${nf1.format(ratio)} раза`];
-  else [color, text] = ["var(--critical)", `▲ Заметно выше обычного — в ${nf1.format(ratio)} раза`];
+  const ratio = usual > 0 ? closed / usual : 0;
+  if (closed === 0) [color, text] = ["var(--good)", "✓ В это время полностью не закрывали ни разу"];
+  else if (ratio < 0.75) [color, text] = ["var(--good)", "✓ Закрывают реже обычного"];
+  else if (ratio <= 1.25) [color, text] = ["var(--muted)", "≈ Закрывают как обычно"];
+  else if (ratio <= 2) [color, text] = ["var(--serious)", `▲ Закрывают чаще обычного — в ${nf1.format(ratio)} раза`];
+  else [color, text] = ["var(--critical)", `▲ Закрывают заметно чаще обычного — в ${nf1.format(ratio)} раза`];
   const verdict = el("div", { class: "verdict" });
   const d = el("i", { class: "dot" }); d.style.background = color;
   verdict.append(d, document.createTextNode(text));
   out.append(verdict);
   box.append(out);
-  const row = a.heat[day];
-  const best = argmin(row);
-  const nb = [hour - 1, hour + 1].map(h => (h + 24) % 24).map(h => `${pad(h)}:00 — ${pct(row[h])}`).join(", ");
-  box.append(el("div", { class: "check-more" },
-    `Соседние часы: ${nb}. Спокойнее всего ${DAYS_ACC[day]} ${hourRange(best)} — ${pct(row[best])}. ` +
-    `Это статистика за ${Math.round(S.days)} дней, а не прогноз: закрытия зависят от обстановки.`));
+  const hours = Array.from({ length: 24 }, (_, h) => levelsAt(a, day, h));
+  const best = byClosed(hours, Math.min);
+  const nb = [hour - 1, hour + 1].map(h => (h + 24) % 24).map(h => `${pad(h)}:00 — ${pct(hours[h][0])}`).join(", ");
+  const few = !a.group && a.episodes < 20  // мало ограничений — «в N раз чаще» почти случайно
+    ? `Данных мало: всего ${a.episodes} ограничений за ${Math.round(S.days)} дней, так что сравнение с обычным грубое. ` : "";
+  box.append(el("div", { class: "check-more" }, few +
+    `Полные закрытия в соседние часы: ${nb}. Спокойнее всего ${DAYS_ACC[day]} ${hourRange(best)} — ` +
+    `закрыт ${pct(hours[best][0])}, по согласованию ${pct(hours[best][1])}. ` +
+    `Это статистика за ${Math.round(S.days)} дней, а не прогноз: ограничения вводятся по обстановке.`));
 }
 
 function renderCharts(a) {
@@ -629,10 +663,16 @@ function renderHeat(a) {
   const cw = (W - l) / 24;
   const ch = Math.max(16, Math.min(28, cw));
   const H = t + ch * 7;
-  const max = Math.max(...a.heat.flat()) || 0.01;
+  const closedOnly = heatMode === "closed" && a.heat_closed;
+  const grid = closedOnly ? a.heat_closed : a.heat;
+  $("#heat-sub").textContent = (closedOnly
+    ? "Доля времени, когда аэропорт был закрыт полностью."
+    : "Доля времени под ограничениями: закрыт или работал по согласованию.") +
+    " Нажмите на ячейку, чтобы проверить этот вылет.";
+  const max = Math.max(...grid.flat()) || 0.01;
   const svg = sv("svg", { width: W, height: H, role: "img", "aria-label": "Тепловая карта: день недели × час" });
   for (let h = 0; h < 24; h += 3) svg.append(sv("text", { x: l + h * cw + cw / 2, y: 11, "text-anchor": "middle" }, pad(h)));
-  a.heat.forEach((row, d) => {
+  grid.forEach((row, d) => {
     svg.append(sv("text", { x: 0, y: t + d * ch + ch / 2 + 4 }, DAYS[d]));
     row.forEach((v, h) => {
       const sel = d === check.day && h === check.hour;
@@ -642,7 +682,8 @@ function renderHeat(a) {
         fill: heatColor(v, max),
         stroke: sel ? "var(--text-1)" : null, "stroke-width": sel ? 2 : null,
       });
-      bindTip(r, `${DAYS_FULL[d][0].toUpperCase() + DAYS_FULL[d].slice(1)}, ${hourRange(h)}`, [{ value: pct(v), label: "времени под ограничениями" }]);
+      bindTip(r, `${DAYS_FULL[d][0].toUpperCase() + DAYS_FULL[d].slice(1)}, ${hourRange(h)}`,
+        [{ value: pct(v), label: closedOnly ? "времени закрыт полностью" : "времени под ограничениями" }]);
       r.addEventListener("click", () => { check = { day: d, hour: h }; syncCheck(); });
       svg.append(r);
     });
@@ -847,6 +888,11 @@ function init() {
   daySel.addEventListener("change", () => { check.day = +daySel.value; syncCheck(); });
   hourSel.addEventListener("change", () => { check.hour = +hourSel.value; syncCheck(); });
   $("#rank-more").addEventListener("click", () => { rankAll = !rankAll; renderRank(); });
+  document.querySelectorAll("[data-heat]").forEach(b => b.addEventListener("click", () => {
+    heatMode = b.dataset.heat;
+    document.querySelectorAll("[data-heat]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    renderHeat(current);
+  }));
 
   renderNow();
   renderSelect();
