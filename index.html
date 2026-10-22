@@ -834,9 +834,13 @@ function initTelegram() {
 }
 
 function init() {
-  // По умолчанию — завтрашний день недели (МСК), 08:00.
+  // По умолчанию — завтрашний день недели (МСК), 08:00; из бота приходят ?d=день&h=час.
   const mskNow = new Date(Date.now() + 3 * 3600e3);
   check.day = (mskNow.getUTCDay() + 6 + 1) % 7;
+  const qs = new URLSearchParams(location.search);
+  const qDay = Number(qs.get("d")), qHour = Number(qs.get("h"));
+  if (qs.has("d") && Number.isInteger(qDay) && qDay >= 0 && qDay < 7) check.day = qDay;
+  if (qs.has("h") && Number.isInteger(qHour) && qHour >= 0 && qHour < 24) check.hour = qHour;
   const daySel = $("#ck-day"), hourSel = $("#ck-hour");
   DAYS_FULL.forEach((d, i) => daySel.append(el("option", { value: i }, d[0].toUpperCase() + d.slice(1))));
   for (let h = 0; h < 24; h++) hourSel.append(el("option", { value: h }, hourRange(h)));
