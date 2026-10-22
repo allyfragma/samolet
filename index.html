@@ -723,6 +723,7 @@ function renderMethod() {
   ];
   if (S.site) items.push(["Статистика по каждому аэропорту отдельными страницами: ", ["список аэропортов", S.site + "a/"], "."]);
   if (S.metrika) items.push(["Посещения страницы считает Яндекс Метрика — без записи действий посетителей."]);
+  if (S.site) items.push(["Какие данные хранит бот и как их удалить — ", ["политика конфиденциальности", S.site + "privacy/"], "."]);
   for (const parts of items) {
     const li = el("li");
     for (const p of parts) li.append(Array.isArray(p) ? el("a", { href: p[1], target: "_blank", rel: "noopener" }, p[0]) : document.createTextNode(p));
