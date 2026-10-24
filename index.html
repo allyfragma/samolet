@@ -133,6 +133,10 @@ select {
 .check-out .big { font-size: 48px; font-weight: 600; line-height: 1; grid-row: span 2; }
 .verdict { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .check-more { color: var(--text-2); font-size: 14px; margin-top: 12px; }
+/* Подпись к данным Яндекс Расписаний: по их условиям — шрифтом и цветом основного текста. */
+.credit { color: var(--text); margin: 0 0 12px; }
+.credit a { color: inherit; }
+#ck-out .credit { margin: 12px 0 0; }
 @media (max-width: 520px) { .check-out { grid-template-columns: 1fr; } .check-out .big { grid-row: auto; } }
 
 /* Графики */
@@ -233,6 +237,7 @@ footer ul { padding-left: 18px; margin: 8px 0; }
   </div>
 
   <section class="tiles" id="tiles"></section>
+  <p class="credit" id="tiles-credit" hidden></p>
 
   <section class="card" id="check">
     <h2>Проверить вылет</h2>
@@ -347,6 +352,27 @@ const nf1 = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFr
 const pct = (x) => nf1.format(x * 100) + "%";
 const hrs = (h) => nf1.format(h) + " ч";
 const pad = (n) => String(n).padStart(2, "0");
+// Оценки по расписанию округляем: точность до рейса тут мнимая.
+const rounded = (n) => (n >= 100 ? Math.round(n / 10) * 10 : Math.round(n));
+const approx = (n) => rounded(n).toLocaleString("ru-RU");
+function plural(n, one, few, many) {
+  const m = Math.abs(n) % 100, d = m % 10;
+  return m >= 11 && m <= 14 ? many : d === 1 ? one : d >= 2 && d <= 4 ? few : many;
+}
+const flightsText = (n) => `${approx(n)} ${plural(rounded(n), "рейс", "рейса", "рейсов")}`;
+function peopleText(n) {
+  if (n >= 10000) return `${Math.round(n / 1000).toLocaleString("ru-RU")} тыс. пассажиров`;
+  if (n >= 1000) return `${nf1.format(n / 1000)} тыс. пассажиров`;
+  return `${approx(n)} ${plural(rounded(n), "пассажир", "пассажира", "пассажиров")}`;
+}
+// Расписание аэропорта или null, если его нет.
+const trafficOf = (a) => (a.traffic && a.traffic.per_day ? a.traffic : null);
+// «Данные предоставлены сервисом Яндекс.Расписания» со ссылкой — так просит Яндекс.
+function scheduleCredit(node) {
+  node.textContent = "";
+  node.append(el("a", { href: S.schedule.url, target: "_blank", rel: "noopener" }, S.schedule.source));
+  return node;
+}
 const hourRange = (h) => `${pad(h)}:00–${pad((h + 1) % 24)}:00`;
 const sum2 = (v) => v[0] + v[1];
 
@@ -553,11 +579,21 @@ function renderTiles(a) {
       ? ["Эпизодов ограничений", String(a.episodes), "сумма по четырём аэропортам"]
       : ["Эпизодов ограничений", String(a.episodes), `типичная длительность ${fmtDur(a.median_min)}`],
   ];
+  const traffic = trafficOf(a);
+  if (traffic) {
+    const [closed, limited] = traffic.flights;
+    tiles.push(["Рейсов пришлось на полные закрытия", `≈ ${approx(closed)}`,
+      `≈ ${peopleText(traffic.pax[0])}; ещё ${flightsText(limited)} — по согласованию. ` +
+      `Взлётов и посадок в сутки: ${approx(traffic.per_day)}`]);
+  }
   for (const [label, value, note] of tiles) {
     const t = el("div", { class: "card tile" });
     t.append(el("div", { class: "label" }, label), el("div", { class: "value" }, value), el("div", { class: "note" }, note));
     box.append(t);
   }
+  const credit = $("#tiles-credit");
+  credit.hidden = !traffic;
+  if (traffic) scheduleCredit(credit);
 }
 
 // Индекс часа или дня с наименьшей (или наибольшей) долей полных закрытий; при равенстве — по общей доле.
@@ -605,10 +641,14 @@ function renderCheck(a) {
   const nb = [hour - 1, hour + 1].map(h => (h + 24) % 24).map(h => `${pad(h)}:00 — ${pct(hours[h][0])}`).join(", ");
   const few = !a.group && a.episodes < 20  // мало ограничений — «в N раз чаще» почти случайно
     ? `Данных мало: всего ${a.episodes} ограничений за ${Math.round(S.days)} дней, так что сравнение с обычным грубое. ` : "";
-  box.append(el("div", { class: "check-more" }, few +
+  const traffic = trafficOf(a);
+  const moves = traffic ? traffic.hour[hour] : 0;
+  const busy = traffic ? `Взлётов и посадок в этот час по расписанию: ${moves >= 0.5 ? approx(moves) : "почти нет"}. ` : "";
+  box.append(el("div", { class: "check-more" }, few + busy +
     `Полные закрытия в соседние часы: ${nb}. Спокойнее всего ${DAYS_ACC[day]} ${hourRange(best)} — ` +
     `закрыт ${pct(hours[best][0])}, по согласованию ${pct(hours[best][1])}. ` +
     `Это статистика за ${Math.round(S.days)} дней, а не прогноз: ограничения вводятся по обстановке.`));
+  if (traffic) box.append(scheduleCredit(el("div", { class: "credit" })));
 }
 
 function renderCharts(a) {
@@ -758,10 +798,14 @@ function renderMethod() {
     ["«Закрыт» — введены ограничения на приём и выпуск воздушных судов. «По согласованию» — аэропорт принимает и отправляет рейсы по согласованию с соответствующими органами: рейсы идут, но вероятны задержки."],
     ["Время — момент публикации сообщения (МСК); фактическое введение или снятие может отличаться на несколько минут."],
     [`Если о снятии не сообщили (${est} из ${S.segments} эпизодов), длительность считается типичной для этого аэропорта.`],
-    ["«Московский авиаузел» — среднее по Шереметьево, Внуково, Домодедово и Жуковскому: какую долю времени был под ограничениями аэропорт, из которого вы летите."],
+    [S.hub.weighted
+      ? "«Московский авиаузел» — среднее по Шереметьево, Внуково, Домодедово и Жуковскому с учётом числа рейсов по расписанию: час закрытого Шереметьево весит больше часа Жуковского, а ночью, когда рейсов мало, закрытие весит меньше. Доля — какая часть рейсов узла пришлась на ограничения."
+      : "«Московский авиаузел» — среднее по Шереметьево, Внуково, Домодедово и Жуковскому: какую долю времени был под ограничениями аэропорт, из которого вы летите."],
     ["Росавиация пишет, что быстрее всего обновляет канал в MAX; в Telegram-версии отдельные сообщения могут отсутствовать."],
     ["Это статистика прошлого, а не прогноз: ограничения вводятся по обстановке."],
   ];
+  if (S.schedule) items.push(["Рейсы — по текущему расписанию (", [S.schedule.source, S.schedule.url],
+    "): сколько взлётов и посадок обычно бывает в каждый час недели. Сколько рейсов пришлось на ограничения — оценка: расписание за прошлые месяцы могло отличаться, а пассажиров считаем как кресла × 0,8."]);
   if (S.site) items.push(["Статистика по каждому аэропорту отдельными страницами: ", ["список аэропортов", S.site + "a/"], "."]);
   if (S.metrika) items.push(["Посещения страницы считает Яндекс Метрика — без записи действий посетителей."]);
   if (S.site) items.push(["Какие данные хранит бот и как их удалить — ", ["политика конфиденциальности", S.site + "privacy/"], "."]);
